@@ -1,0 +1,31 @@
+┌─────────────────────────────────────────────────────────┐
+│                    CLIENT SIDE (Browser)                │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ Webcam Stream → YOLOv8 Pose Model (ONNX/TensorFlow) │ │
+│ │ ↓                                                     │ │
+│ │ Extract Landmarks & Angles                           │ │
+│ │ ↓                                                     │ │
+│ │ Send Joint Data via WebSocket                        │ │
+│ └──────────────────────────────────────────────────────┘ │
+└────────────────────┬─────────────────────────────────────┘
+                     │ WebSocket (Real-time)
+┌────────────────────▼─────────────────────────────────────┐
+│                  FASTAPI BACKEND                         │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ Angle Analysis Engine                               │ │
+│ │ - Compare received angles vs exercise targets       │ │
+│ │ - Calculate deviation (correct/warning/wrong)       │ │
+│ │ - Track start/end poses                            │ │
+│ └──────────────────────────────────────────────────────┘ │
+│ ┌──────────────────────────────────────────────────────┐ │
+│ │ Response Service                                    │ │
+│ │ - Send color feedback (RGB codes)                  │ │
+│ │ - Send which joints are wrong                       │ │
+│ │ - Suggest corrections                              │ │
+│ └──────────────────────────────────────────────────────┘ │
+└────────────────────┬─────────────────────────────────────┘
+                     │
+        ┌────────────┼────────────┐
+        ▼            ▼            ▼
+      S3         RDS/DB    Exercise DB
+   (videos)   (sessions)   (configs)

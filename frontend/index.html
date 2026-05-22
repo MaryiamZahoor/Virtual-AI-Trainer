@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual AI Trainer</title>
+    <link rel="stylesheet" href="./style.css?v=2">
+</head>
+<body>
+    <main class="app-shell">
+        <header class="app-header">
+            <div>
+                <h1>Virtual AI Trainer</h1>
+                <p>Real-time form analysis and rep tracking</p>
+            </div>
+
+            <div class="connection-status">
+                <span id="connection-dot" class="status-dot"></span>
+                <span id="connection-text">Disconnected</span>
+            </div>
+        </header>
+
+        <section class="control-panel">
+            <label class="field-group" for="exercise-select">
+                <span>Exercise</span>
+                <select id="exercise-select">
+                    <option value="">Loading exercises...</option>
+                </select>
+            </label>
+
+            <div class="button-stack">
+                <div class="button-row">
+                    <button id="start-btn" class="btn btn-primary" disabled>Start Demo</button>
+                    <button id="stop-btn" class="btn btn-secondary" disabled>Stop Demo</button>
+                </div>
+
+                <div class="button-row">
+                    <button id="start-camera-btn" class="btn btn-primary">Start Camera</button>
+                    <button id="stop-camera-btn" class="btn btn-secondary" disabled>Stop Camera</button>
+                </div>
+
+                <div class="button-row">
+                    <button id="run-inference-btn" class="btn btn-secondary" disabled>Run Test Inference</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="camera-panel">
+            <div class="camera-header">
+                <h2>Camera Preview</h2>
+                <span id="camera-status">Camera off</span>
+            </div>
+
+            <div class="camera-frame">
+                <video id="camera-video" autoplay playsinline muted></video>
+                <canvas id="pose-canvas"></canvas>
+            </div>
+        </section>
+
+        <section class="dashboard-grid">
+            <article class="metric-card">
+                <span class="metric-label">Detected Position</span>
+                <strong id="detected-position">--</strong>
+            </article>
+
+            <article class="metric-card">
+                <span class="metric-label">Session State</span>
+                <strong id="session-state">--</strong>
+            </article>
+
+            <article class="metric-card">
+                <span class="metric-label">Rep Count</span>
+                <strong id="rep-count">0</strong>
+            </article>
+
+            <article class="metric-card">
+                <span class="metric-label">Accuracy</span>
+                <strong id="accuracy-score">--</strong>
+            </article>
+        </section>
+
+        <section class="hold-panel">
+            <div class="hold-header">
+                <span>Hold Progress</span>
+                <span id="hold-percent">0%</span>
+            </div>
+            <div class="progress-track">
+                <div id="hold-progress-bar" class="progress-fill"></div>
+            </div>
+        </section>
+
+        <section class="feedback-grid">
+            <article class="feedback-card">
+                <h2>Joint Status</h2>
+
+                <div class="joint-group">
+                    <h3>Correct</h3>
+                    <p id="correct-joints">--</p>
+                </div>
+
+                <div class="joint-group">
+                    <h3>Warning</h3>
+                    <p id="warning-joints">--</p>
+                </div>
+
+                <div class="joint-group">
+                    <h3>Wrong</h3>
+                    <p id="wrong-joints">--</p>
+                </div>
+            </article>
+
+            <article class="feedback-card">
+                <h2>Suggestions</h2>
+                <ul id="suggestion-list" class="suggestion-list">
+                    <li>No feedback yet.</li>
+                </ul>
+            </article>
+        </section>
+
+        <section class="event-log-panel">
+            <h2>Workout Events</h2>
+            <ul id="event-log" class="event-log">
+                <li>Ready.</li>
+            </ul>
+        </section>
+    </main>
+
+    <script src="vendor/onnxruntime_web/ort.webgpu.min.js"></script>
+    <script src="config.js"></script>
+    <script src="js/api_client.js"></script>
+    <script src="js/websocket_client.js"></script>
+    <script src="js/demo_landmarks.js"></script>
+    <script src="js/feedback_renderer.js"></script>
+    <script src="js/camera_manager.js"></script>
+    <script src="js/canvas_renderer.js"></script>
+    <script src="js/pose_detector.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
