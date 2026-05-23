@@ -1,7 +1,7 @@
 const CONFIG = {
     API_URL: "http://localhost:8000",
     WS_URL: "ws://localhost:8000/ws/analyze",
-    MODEL_NAME: "yolov8s-pose",
+    MODEL_NAME: "yolov8s-pose_fp16",
     MODEL_PATH: "models/",
     CANVAS_WIDTH: 640,
     CANVAS_HEIGHT: 480,

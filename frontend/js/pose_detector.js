@@ -7,6 +7,7 @@ class PoseDetector {
         this.inputSize = 640;
         this.confidenceThreshold = CONFIG.PERSON_CONFIDENCE_THRESHOLD || 0.25;
         this.executionProvider = "webgpu";
+        //this.executionProvider = "wasm";
         this.preprocessCanvas = document.createElement("canvas");
         this.preprocessContext = this.preprocessCanvas.getContext("2d", {
             willReadFrequently: true,
