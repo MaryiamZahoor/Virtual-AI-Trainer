@@ -25,7 +25,13 @@ class WebSocketClient {
             this.socket.onmessage = (event) => {
                 const data = JSON.parse(event.data);
 
-                console.log("Received backend feedback:", data);
+                if (data.timestamp) {
+                    data.roundTripMs = Date.now() - data.timestamp;
+                } else {
+                    data.roundTripMs = null;
+                }
+
+                //console.log("Received backend feedback:", data);
 
                 if (this.messageHandler) {
                     this.messageHandler(data);

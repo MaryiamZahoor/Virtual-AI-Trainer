@@ -28,8 +28,18 @@ class VirtualTrainerApp {
 
         this.poseTimer = null;
         this.poseBusy = false;
-        this.poseFps = 5;
+        this.poseFps = 30;
         this.liveAnalysisRunning = false;
+
+        this.poseFrameCount = 0;
+        this.poseFpsLastTime = performance.now();
+        this.actualPoseFps = 0;
+
+        this.backendFrameCount = 0;
+        this.backendFpsLastTime = performance.now();
+        this.actualBackendFps = 0;
+        this.roundTripSamples = [];
+        this.averageRoundTripMs = 0;
     }
 
     async init() {
@@ -53,6 +63,7 @@ class VirtualTrainerApp {
         this.websocketClient.onMessage((data) => {
             this.feedbackRenderer.render(data);
             this.canvasRenderer.setFeedback(data);
+            this.recordBackendFrame(data.roundTripMs);
         });
 
         this.websocketClient.onStatusChange((status) => {
@@ -164,11 +175,12 @@ class VirtualTrainerApp {
             await this.websocketClient.connect();
             await this.cameraManager.start();
 
+            this.resetPerformanceStats();
             this.liveAnalysisRunning = true;
             this.canvasRenderer.start();
             this.startPoseLoop();
 
-            this.cameraStatus.textContent = "Live analysis on";
+            this.updateLiveStatus();
             this.updateButtonStates();
         } catch (error) {
             this.cameraStatus.textContent = "Camera unavailable";
@@ -231,7 +243,13 @@ class VirtualTrainerApp {
 
         try {
             const pose = await this.poseDetector.detectPose(this.cameraVideo);
-
+            console.log(
+                `preprocess=${pose.timings.preprocessMs.toFixed(1)}ms`,
+                `inference=${pose.timings.inferenceMs.toFixed(1)}ms`,
+                `decode=${pose.timings.decodeMs.toFixed(1)}ms`,
+                `total=${pose.timings.totalMs.toFixed(1)}ms`
+            );
+            this.recordPoseFrame();
             this.canvasRenderer.setKeypoints(pose.keypoints);
 
             if (this.liveAnalysisRunning && pose.backendLandmarks.length) {
@@ -248,10 +266,74 @@ class VirtualTrainerApp {
         }
     }
 
+    resetPerformanceStats() {
+        const now = performance.now();
+
+        this.poseFrameCount = 0;
+        this.poseFpsLastTime = now;
+        this.actualPoseFps = 0;
+
+        this.backendFrameCount = 0;
+        this.backendFpsLastTime = now;
+        this.actualBackendFps = 0;
+        this.roundTripSamples = [];
+        this.averageRoundTripMs = 0;
+    }
+
+    recordPoseFrame() {
+        this.poseFrameCount += 1;
+
+        const now = performance.now();
+        const elapsedMs = now - this.poseFpsLastTime;
+
+        if (elapsedMs >= 1000) {
+            this.actualPoseFps = (this.poseFrameCount * 1000) / elapsedMs;
+            this.poseFrameCount = 0;
+            this.poseFpsLastTime = now;
+            this.updateLiveStatus();
+        }
+    }
+
+    recordBackendFrame(roundTripMs) {
+        this.backendFrameCount += 1;
+
+        if (typeof roundTripMs === "number") {
+            this.roundTripSamples.push(roundTripMs);
+
+            if (this.roundTripSamples.length > 20) {
+                this.roundTripSamples.shift();
+            }
+
+            const totalRoundTrip = this.roundTripSamples.reduce((sum, value) => {
+                return sum + value;
+            }, 0);
+
+            this.averageRoundTripMs = totalRoundTrip / this.roundTripSamples.length;
+        }
+
+        const now = performance.now();
+        const elapsedMs = now - this.backendFpsLastTime;
+
+        if (elapsedMs >= 1000) {
+            this.actualBackendFps = (this.backendFrameCount * 1000) / elapsedMs;
+            this.backendFrameCount = 0;
+            this.backendFpsLastTime = now;
+            this.updateLiveStatus();
+        }
+    }
+
+    updateLiveStatus() {
+        if (!this.liveAnalysisRunning) {
+            return;
+        }
+
+        this.cameraStatus.textContent =
+            `Live analysis on · Pose ${this.actualPoseFps.toFixed(1)} FPS · Backend ${this.actualBackendFps.toFixed(1)} FPS · RTT ${this.averageRoundTripMs.toFixed(0)} ms`;
+    }
+
     updateButtonStates() {
         const hasExercise = Boolean(this.exerciseSelect.value);
         const demoRunning = Boolean(this.demoTimer);
-        const cameraRunning = this.cameraManager.isRunning();
 
         this.startButton.disabled = !hasExercise || demoRunning || this.liveAnalysisRunning;
         this.stopButton.disabled = !demoRunning;
@@ -261,7 +343,8 @@ class VirtualTrainerApp {
 
         this.stopCameraButton.disabled = !this.liveAnalysisRunning;
 
-        this.runInferenceButton.disabled = !this.poseModelLoaded || !cameraRunning;
+        this.runInferenceButton.disabled =
+            !this.poseModelLoaded || !this.cameraManager.isRunning();
 
         this.exerciseSelect.disabled = demoRunning || this.liveAnalysisRunning;
     }

@@ -5,7 +5,7 @@ class PoseDetector {
         this.inputName = null;
         this.outputNames = [];
         this.inputSize = 640;
-        this.confidenceThreshold = CONFIG.CONFIDENCE_THRESHOLD;
+        this.confidenceThreshold = CONFIG.PERSON_CONFIDENCE_THRESHOLD || 0.25;
         this.executionProvider = "webgpu";
         this.preprocessCanvas = document.createElement("canvas");
         this.preprocessContext = this.preprocessCanvas.getContext("2d", {
@@ -65,12 +65,25 @@ class PoseDetector {
             outputShape: result.outputShape,
             outputLength: result.outputLength,
             executionProvider: this.executionProvider,
+            timings: result.timings,
         };
     }
 
     async detectPose(videoElement) {
         const result = await this.runInference(videoElement);
-        return this.decodeOutput(result.outputTensor, videoElement);
+
+        const decodeStart = performance.now();
+        const pose = this.decodeOutput(result.outputTensor, videoElement);
+        const decodeMs = performance.now() - decodeStart;
+
+        pose.timings = {
+            preprocessMs: result.timings.preprocessMs,
+            inferenceMs: result.timings.inferenceMs,
+            decodeMs,
+            totalMs: result.timings.preprocessMs + result.timings.inferenceMs + decodeMs,
+        };
+
+        return pose;
     }
 
     async runInference(videoElement) {
@@ -82,13 +95,18 @@ class PoseDetector {
             throw new Error("Camera frame is not ready");
         }
 
+        const preprocessStart = performance.now();
         const inputTensor = this.preprocessVideoFrame(videoElement);
+        const preprocessMs = performance.now() - preprocessStart;
 
         const feeds = {
             [this.inputName]: inputTensor,
         };
 
+        const inferenceStart = performance.now();
         const results = await this.session.run(feeds);
+        const inferenceMs = performance.now() - inferenceStart;
+
         const outputName = this.outputNames[0];
         const outputTensor = results[outputName];
 
@@ -99,6 +117,10 @@ class PoseDetector {
             outputName,
             outputShape: outputTensor.dims,
             outputLength: outputTensor.data.length,
+            timings: {
+                preprocessMs,
+                inferenceMs,
+            },
         };
     }
 
