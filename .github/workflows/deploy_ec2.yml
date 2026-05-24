@@ -16,10 +16,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -45,18 +45,58 @@ jobs:
       - name: Add SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
           chmod 600 ~/.ssh/ec2_key
 
       - name: Add EC2 host to known hosts
         run: |
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
 
+      - name: Check EC2 connection
+        run: |
+          ssh -i ~/.ssh/ec2_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
+            echo "Connected to EC2"
+            whoami
+            pwd
+          '
+
       - name: Deploy on EC2
         run: |
           ssh -i ~/.ssh/ec2_key ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} '
-            cd ~/virtualTrainer &&
-            git pull origin main &&
-            docker-compose -f docker-compose.prod.yml up -d --build &&
+            set -e
+
+            echo "Moving to project folder"
+            cd ~/virtualTrainer
+
+            echo "Current branch and commit"
+            git branch --show-current
+            git rev-parse --short HEAD
+
+            echo "Pulling latest code"
+            git pull origin main
+
+            echo "Checking Docker"
+            docker --version
+            docker ps
+
+            echo "Checking Docker Compose"
+            if command -v docker-compose >/dev/null 2>&1; then
+              docker-compose version
+              COMPOSE_CMD="docker-compose"
+            elif docker compose version >/dev/null 2>&1; then
+              docker compose version
+              COMPOSE_CMD="docker compose"
+            else
+              echo "Docker Compose is not installed"
+              exit 1
+            fi
+
+            echo "Starting production containers"
+            $COMPOSE_CMD -f docker-compose.prod.yml up -d --build
+
+            echo "Running containers"
+            docker ps
+
+            echo "Cleaning unused Docker images"
             docker image prune -f
           '
