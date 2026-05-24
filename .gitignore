@@ -43,3 +43,5 @@ Thumbs.db
 *.onnx
 *.pb
 models/weights/
+PROJECT_PLAN.md 
+plan.txt
